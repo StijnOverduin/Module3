@@ -26,9 +26,6 @@ public class MyProxy extends PrivacyProxy {
         // if we want to print all the request headers , use the below code:
         // it does a for-loop over all headers
 
-       if (url.contains("js")) {
-    	   return null;
-       }
        if (url.contains("clients1.google.com")) {
     	   return null;
        }
@@ -55,8 +52,12 @@ public class MyProxy extends PrivacyProxy {
         requestHeaders.remove("Cookie");
         }
         if (requestHeaders.containsKey("Referer")) {
-        requestHeaders.remove("Referer");
+        	if (!url.contains(requestHeaders.get("Referer"))) {
+        		return null;
+        	}
         }
+        
+        requestHeaders.replace("Accept-Encoding", "deflate");
 
         // example code to insert (or replace) the  Niceness  header:
 
@@ -84,24 +85,21 @@ public class MyProxy extends PrivacyProxy {
         log("Response: "+httpresponse);
 
         // if you want to (safely, i.e., without binary garbage) print the entire response, uncomment the following:
-/*
-        printSafe(originalBytes);
-*/
+        
+        //printSafe(originalBytes);
+
 
         // if you want to modify the response, you can either modify the byte array directly,
         // or first convert it to a string and then modify that, _if_ you know for sure the response is in text form
         // (otherwise, a string doesn't make sense).
-/*
+
         if (responseHeaders.containsKey("Content-Type") && responseHeaders.get("Content-Type").startsWith("text/html")) {
              String s = new String(originalBytes);
-             String s2 = s.replaceAll("headers", " // if you want to (safely, i.e., without binary garbage) print the entire response, uncomment the following: // printSafe(originalBytes); // if you want to modify the response, you can either modify the byte array directly, // or first convert it to a string and then modify that, _if_ you know for sure the response is in text form // (otherwise, a string doesn't make sense). jaja");
+             String s2 = s.replaceAll("navigator", "");
              byte [] alteredBytes = s2.getBytes();
-             log("L: "+originalBytes.length);
-             responseLength = s2.length();
-             log("L: "+alteredBytes.length);
              return alteredBytes;
         }
-*/
+
         // return the original, unmodified array:
         return originalBytes;
     }
