@@ -26,9 +26,10 @@ public class MyProxy extends PrivacyProxy {
         // if we want to print all the request headers , use the below code:
         // it does a for-loop over all headers
 
-       if (url.contains("clients1.google.com")) {
+       if (url.contains("analytics")) {
     	   return null;
        }
+       
        if (url.contains("pagead")) {
     	   return null;
        }
@@ -38,9 +39,9 @@ public class MyProxy extends PrivacyProxy {
        }
        
         // example code to do something if a certain requestheader is present:
-
+      
         if (requestHeaders.containsKey("User-Agent")) {
-        	requestHeaders.replace("User-Agent", "Mozilla/FOUT (compatible, MSIE FOUT, Windows NT FOUT; Trident/FOUT;  rv:FOUT) like FOUT");
+        	requestHeaders.replace("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A");
         }
        
         if (requestHeaders.containsKey("Cache-Control")) {
@@ -57,7 +58,7 @@ public class MyProxy extends PrivacyProxy {
         	}
         }
         
-        requestHeaders.replace("Accept-Encoding", "deflate");
+        requestHeaders.replace("Accept-Encoding", "identity");
 
         // example code to insert (or replace) the  Niceness  header:
 
@@ -96,7 +97,9 @@ public class MyProxy extends PrivacyProxy {
         if (responseHeaders.containsKey("Content-Type") && responseHeaders.get("Content-Type").startsWith("text/html")) {
              String s = new String(originalBytes);
              String s2 = s.replaceAll("navigator", "");
-             byte [] alteredBytes = s2.getBytes();
+             String s3 = s2.replaceAll("<script type=\"text/javascript\" src=\"http://apis.google.com/js/plusone.js\"></script>", "");
+             String s4 = s3.replaceAll("<iframe src=\"http://www\\.facebook\\.com/plugins/like\\.php.*?</iframe>", "");
+             byte [] alteredBytes = s4.getBytes();
              return alteredBytes;
         }
 
