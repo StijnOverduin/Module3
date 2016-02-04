@@ -26,14 +26,26 @@ public class MyProxy extends PrivacyProxy {
         // if we want to print all the request headers , use the below code:
         // it does a for-loop over all headers
 
-       
+       if (url.contains("js")) {
+    	   return null;
+       }
+       if (url.contains("clients1.google.com")) {
+    	   return null;
+       }
+       if (url.contains("pagead")) {
+    	   return null;
+       }
 
+       if (url.contains("plugin")) {
+    	   return null;
+       }
+       
         // example code to do something if a certain requestheader is present:
 
         if (requestHeaders.containsKey("User-Agent")) {
-        	requestHeaders.replace("User-Agent", "Incognito");
+        	requestHeaders.replace("User-Agent", "Mozilla/FOUT (compatible, MSIE FOUT, Windows NT FOUT; Trident/FOUT;  rv:FOUT) like FOUT");
         }
-        
+       
         if (requestHeaders.containsKey("Cache-Control")) {
         	requestHeaders.replace("Cache-Control", "no-store");
         }
@@ -49,6 +61,7 @@ public class MyProxy extends PrivacyProxy {
         // example code to insert (or replace) the  Niceness  header:
 
         requestHeaders.put("Accept-Language","en-US;q=1.0");
+        requestHeaders.put("DNT", "1");
 
         for (String header : requestHeaders.keySet()) {
             // within the for loop, the variable  header  contains the name of the header
