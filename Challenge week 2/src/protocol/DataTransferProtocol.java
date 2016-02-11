@@ -15,11 +15,11 @@ public class DataTransferProtocol extends IRDTProtocol {
 	private int packetNumber = 0;
 	private Integer[] pkt;
 	private int packetAmount;
-	
+
 	// change the following as you wish:
 	static final int HEADERSIZE = 1; // number of header bytes in each packet
 	static final int DATASIZE = 50; // max. number of user data bytes in each
-										// packet
+									// packet
 
 	@Override
 	public void sender() {
@@ -41,56 +41,55 @@ public class DataTransferProtocol extends IRDTProtocol {
 			packetNumber++;
 			filePointer = filePointer + DATASIZE;
 		}
-			sendPackets();
-			client.Utils.Timeout.SetTimeout(3000, this, packets.size()-1);
-			
-//			getNetworkLayer().sendPacket(pkt);
-//			System.out.println("Sent one packet with header=" + pkt[0]);
+		sendPackets();
+		client.Utils.Timeout.SetTimeout(3000, this, packets.size() - 1);
 
-			// schedule a timer for 1000 ms into the future, just to show how
-			// that works:
-		
+		// getNetworkLayer().sendPacket(pkt);
+		// System.out.println("Sent one packet with header=" + pkt[0]);
 
-			// and loop and sleep; you may use this loop to check for incoming
-			// acks..
+		// schedule a timer for 1000 ms into the future, just to show how
+		// that works:
 
-			boolean stop = false;
-			while (!stop) {
-				Integer[] ackPkt = getNetworkLayer().receivePacket();
-				if (ackPkt != null) {
-					Iterator<Integer[]> itje = packets.iterator();
-					while ( itje.hasNext()) {
-						Integer[] entry = itje.next();
-						if (entry[0] == ackPkt[0]) {
-							System.out.println("got ack");
-							itje.remove();
-							System.out.println(packets);
-							if (ackPkt[0] == 255) {
-								stop = true;
-							}
-							if (packets.size() == 0) {
-								Integer[] lastPkt = new Integer[HEADERSIZE];
-								lastPkt[0] = 255;
-								getNetworkLayer().sendPacket(lastPkt);
-							
-							}
+		// and loop and sleep; you may use this loop to check for incoming
+		// acks..
+
+		boolean stop = false;
+		while (!stop) {
+			Integer[] ackPkt = getNetworkLayer().receivePacket();
+			if (ackPkt != null) {
+				Iterator<Integer[]> itje = packets.iterator();
+				while (itje.hasNext()) {
+					Integer[] entry = itje.next();
+					if (entry[0] == ackPkt[0]) {
+						System.out.println("got ack");
+						itje.remove();
+						System.out.println(packets);
+						if (ackPkt[0] == 255) {
+							stop = true;
+						}
+						if (packets.size() == 0) {
+							Integer[] lastPkt = new Integer[HEADERSIZE];
+							lastPkt[0] = 255;
+							getNetworkLayer().sendPacket(lastPkt);
+
 						}
 					}
 				}
-
-				try {
-					Thread.sleep(10);
-				} catch (InterruptedException e) {
-					stop = true;
-				}
 			}
-		
+
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				stop = true;
+			}
+		}
+
 	}
 
 	public void sendPackets() {
 		System.out.println("Packets send");
 		for (Integer[] pkt : packets) {
-		getNetworkLayer().sendPacket(pkt);
+			getNetworkLayer().sendPacket(pkt);
 		}
 	}
 
@@ -109,7 +108,6 @@ public class DataTransferProtocol extends IRDTProtocol {
 
 	@Override
 	public void receiver() {
-		int counter = 0;
 		Set<Integer> receivedHeaders = new HashSet<Integer>();
 		Map<Integer, Integer[]> receivedPkts = new HashMap<Integer, Integer[]>();
 		System.out.println("Receiving...");
@@ -137,30 +135,12 @@ public class DataTransferProtocol extends IRDTProtocol {
 
 					// append the packet's data part (excluding the header)
 					// to the fileContents array, first making it larger
-					if (packet[0] == counter) {
-						int oldlength = fileContents.length;
-						int datalen = packet.length - HEADERSIZE;
-						fileContents = Arrays.copyOf(fileContents, oldlength + datalen);
-						System.arraycopy(packet, HEADERSIZE, fileContents, oldlength, datalen);
-						counter++;
-						for (Integer e: receivedPkts.keySet()) {
-							for (Integer headers : receivedPkts.keySet()) {
-								if (headers == counter) {
-									oldlength = fileContents.length;
-									datalen = packet.length - HEADERSIZE;
-									fileContents = Arrays.copyOf(fileContents, oldlength + datalen);
-									System.arraycopy(packet, HEADERSIZE, fileContents, oldlength, datalen);
-									counter++;
-								}
-							}
-						}
-					} else {
-						if (packet[0] == 255) {
-							stop = true;
-						}
-						receivedPkts.put(packet[0], packet);
-					}
+					
+					if (packet[0] == 255) {
+						fileContents = sortMap(receivedPkts);
+						stop = true;
 				}
+					receivedPkts.put(packet[0], packet);
 				// and let's just hope the file is now complete
 			} else {
 				// wait ~10ms (or however long the OS makes us wait) before
@@ -172,8 +152,27 @@ public class DataTransferProtocol extends IRDTProtocol {
 				}
 			}
 		}
+		}
 
 		// write to the output file
 		Utils.setFileContents(fileContents, getFileID());
 	}
+
+	public Integer[] sortMap(Map<Integer, Integer[]> unsortedMap) {
+		int counter = 0;
+		Integer[] fileContents = new Integer[0];
+		for (int i = 0; i < unsortedMap.size(); i++) {
+			for (Integer k : unsortedMap.keySet()) {
+				if (k == counter) {
+					int oldlength = fileContents.length;
+					int datalen = unsortedMap.get(k).length - HEADERSIZE;
+					fileContents = Arrays.copyOf(fileContents, oldlength + datalen);
+					System.arraycopy(unsortedMap.get(k), HEADERSIZE, fileContents, oldlength, datalen);
+					counter++;
+				}
+			}
+		}
+		return fileContents;
+	}
+
 }
