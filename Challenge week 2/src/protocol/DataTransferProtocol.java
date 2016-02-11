@@ -45,7 +45,7 @@ public class DataTransferProtocol extends IRDTProtocol {
 			client.Utils.Timeout.SetTimeout(4000, this, packetNumber);
 
 			// and loop and sleep; you may use this loop to check for incoming
-			// acks...
+			// acks..
 
 			boolean stop = false;
 			while (!stop) {
