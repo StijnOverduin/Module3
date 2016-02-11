@@ -1,7 +1,9 @@
 package protocol;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import client.Utils;
@@ -11,10 +13,11 @@ public class DataTransferProtocol extends IRDTProtocol {
 	Set<Integer[]> packets = new HashSet<Integer[]>();
 	private int packetNumber = 0;
 	private Integer[] pkt;
-
+	private int packetAmount;
+	
 	// change the following as you wish:
 	static final int HEADERSIZE = 1; // number of header bytes in each packet
-	static final int DATASIZE = 400; // max. number of user data bytes in each
+	static final int DATASIZE = 100; // max. number of user data bytes in each
 										// packet
 
 	@Override
@@ -24,25 +27,28 @@ public class DataTransferProtocol extends IRDTProtocol {
 		Integer[] fileContents = Utils.getFileContents(getFileID());
 		// keep track of where we are in the data
 		int filePointer = 0;
-		while (packetNumber < fileContents.length / DATASIZE + 1) {
-
-			// create a new packet of appropriate size
+		this.packetAmount = fileContents.length / DATASIZE + 1;
+		while (packetNumber < packetAmount) {
 			int datalen = Math.min(DATASIZE, fileContents.length - filePointer);
 			pkt = new Integer[HEADERSIZE + datalen];
-			packets.add(pkt);
 			// write something random into the header byte
 			pkt[0] = packetNumber;
 			// copy databytes from the input file into data part of the packet,
 			// i.e., after the header
 			System.arraycopy(fileContents, filePointer, pkt, HEADERSIZE, datalen);
-
-			// send the packet to the network layer
-			getNetworkLayer().sendPacket(pkt);
-			System.out.println("Sent one packet with header=" + pkt[0]);
+			packets.add(pkt);
+			packetNumber++;
+			filePointer = filePointer + DATASIZE;
+		}
+			sendPackets();
+			client.Utils.Timeout.SetTimeout(3000, this, packetNumber);
+			
+//			getNetworkLayer().sendPacket(pkt);
+//			System.out.println("Sent one packet with header=" + pkt[0]);
 
 			// schedule a timer for 1000 ms into the future, just to show how
 			// that works:
-			client.Utils.Timeout.SetTimeout(4000, this, packetNumber);
+		
 
 			// and loop and sleep; you may use this loop to check for incoming
 			// acks..
@@ -55,9 +61,15 @@ public class DataTransferProtocol extends IRDTProtocol {
 						if (entry[0] == ackPkt[0]) {
 							System.out.println("got ack");
 							packets.remove(entry);
-							filePointer = filePointer + DATASIZE;
-							packetNumber++;
-							stop = true;
+							if (ackPkt[0] == -1) {
+								stop = true;
+							}
+							if (packets.size() == 0) {
+								Integer[] lastPkt = new Integer[HEADERSIZE];
+								lastPkt[0] = -1;
+								getNetworkLayer().sendPacket(lastPkt);
+							
+							}
 						}
 					}
 				}
@@ -68,10 +80,13 @@ public class DataTransferProtocol extends IRDTProtocol {
 					stop = true;
 				}
 			}
+		
+	}
+
+	public void sendPackets() {
+		for (Integer[] pkt : packets) {
+		getNetworkLayer().sendPacket(pkt);
 		}
-		Integer[] lastPkt = new Integer[HEADERSIZE];
-		lastPkt[0] = 99;
-		getNetworkLayer().sendPacket(lastPkt);
 	}
 
 	@Override
@@ -80,8 +95,8 @@ public class DataTransferProtocol extends IRDTProtocol {
 		// handle expiration of the timeout:
 		for (Integer[] entry : packets) {
 			if (entry[0] == tag) {
-				getNetworkLayer().sendPacket(pkt);
-				client.Utils.Timeout.SetTimeout(6000, this, packetNumber);
+				sendPackets();
+				client.Utils.Timeout.SetTimeout(3000, this, packetNumber);
 			}
 		}
 		System.out.println("Timer expired with tag=" + z);
@@ -89,7 +104,9 @@ public class DataTransferProtocol extends IRDTProtocol {
 
 	@Override
 	public void receiver() {
+		int counter = 0;
 		Set<Integer> receivedHeaders = new HashSet<Integer>();
+		Map<Integer, Integer[]> receivedPkts = new HashMap<Integer, Integer[]>();
 		System.out.println("Receiving...");
 
 		// create the array that will contain the file contents
@@ -103,28 +120,41 @@ public class DataTransferProtocol extends IRDTProtocol {
 		while (!stop) {
 			// try to receive a packet from the network layer
 			Integer[] packet = getNetworkLayer().receivePacket();
-			
 
 			// if we indeed received a packet
 			if (packet != null) {
-					if (!receivedHeaders.contains(packet[0])) {
-						receivedHeaders.add(packet[0]);
-						Integer[] ackPkt = new Integer[HEADERSIZE];
-						ackPkt[0] = packet[0];
-						getNetworkLayer().sendPacket(ackPkt);
-						// tell the user
-						System.out.println("Received packet, length=" + packet.length + "  first byte=" + packet[0]);
+				if (!receivedHeaders.contains(packet[0])) {
+					Integer[] ackPkt = new Integer[HEADERSIZE];
+					ackPkt[0] = packet[0];
+					getNetworkLayer().sendPacket(ackPkt);
+					// tell the user
+					System.out.println("Received packet, length=" + packet.length + "  first byte=" + packet[0]);
 
-						// append the packet's data part (excluding the header)
-						// to the fileContents array, first making it larger
+					// append the packet's data part (excluding the header)
+					// to the fileContents array, first making it larger
+					if (packet[0] == counter) {
 						int oldlength = fileContents.length;
 						int datalen = packet.length - HEADERSIZE;
 						fileContents = Arrays.copyOf(fileContents, oldlength + datalen);
 						System.arraycopy(packet, HEADERSIZE, fileContents, oldlength, datalen);
-						if (packet[0] == 99) {
+						counter++;
+						for (Integer headers : receivedPkts.keySet()) {
+							if (headers == counter) {
+								oldlength = fileContents.length;
+								datalen = packet.length - HEADERSIZE;
+								fileContents = Arrays.copyOf(fileContents, oldlength + datalen);
+								System.arraycopy(packet, HEADERSIZE, fileContents, oldlength, datalen);
+								counter++;
+							}
+						}
+					} else {
+						if (packet[0] == -1) {
+							
 							stop = true;
 						}
+						receivedPkts.put(packet[0], packet);
 					}
+				}
 				// and let's just hope the file is now complete
 			} else {
 				// wait ~10ms (or however long the OS makes us wait) before
