@@ -18,7 +18,7 @@ public class DataTransferProtocol extends IRDTProtocol {
 
 	// change the following as you wish:
 	static final int HEADERSIZE = 1; // number of header bytes in each packet
-	static final int DATASIZE = 50; // max. number of user data bytes in each
+	static final int DATASIZE = 400; // max. number of user data bytes in each
 									// packet
 
 	@Override
@@ -63,7 +63,6 @@ public class DataTransferProtocol extends IRDTProtocol {
 					if (entry[0] == ackPkt[0]) {
 						System.out.println("got ack");
 						itje.remove();
-						System.out.println(packets);
 						if (ackPkt[0] == 255) {
 							stop = true;
 						}
@@ -97,12 +96,8 @@ public class DataTransferProtocol extends IRDTProtocol {
 	public void TimeoutElapsed(Object tag) {
 		int z = (Integer) tag;
 		// handle expiration of the timeout:
-		for (Integer[] entry : packets) {
-			if (entry[0] == tag) {
 				sendPackets();
 				client.Utils.Timeout.SetTimeout(3000, this, tag);
-			}
-		}
 		System.out.println("Timer expired with tag=" + z);
 	}
 
@@ -117,13 +112,12 @@ public class DataTransferProtocol extends IRDTProtocol {
 		// (but not most efficient)
 		// is to reallocate the array every time we find out there's more data
 		Integer[] fileContents = new Integer[0];
-
+		
 		// loop until we are done receiving the file
 		boolean stop = false;
 		while (!stop) {
 			// try to receive a packet from the network layer
 			Integer[] packet = getNetworkLayer().receivePacket();
-
 			// if we indeed received a packet
 			if (packet != null) {
 				if (!receivedHeaders.contains(packet[0])) {
@@ -139,8 +133,10 @@ public class DataTransferProtocol extends IRDTProtocol {
 					if (packet[0] == 255) {
 						fileContents = sortMap(receivedPkts);
 						stop = true;
-				}
+				} else {
 					receivedPkts.put(packet[0], packet);
+				}
+				}
 				// and let's just hope the file is now complete
 			} else {
 				// wait ~10ms (or however long the OS makes us wait) before
@@ -151,7 +147,6 @@ public class DataTransferProtocol extends IRDTProtocol {
 					stop = true;
 				}
 			}
-		}
 		}
 
 		// write to the output file
