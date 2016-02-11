@@ -18,7 +18,7 @@ public class DataTransferProtocol extends IRDTProtocol {
 
 	// change the following as you wish:
 	static final int HEADERSIZE = 1; // number of header bytes in each packet
-	static final int DATASIZE = 400; // max. number of user data bytes in each
+	static final int DATASIZE = 512; // max. number of user data bytes in each
 									// packet
 
 	@Override
@@ -42,7 +42,7 @@ public class DataTransferProtocol extends IRDTProtocol {
 			filePointer = filePointer + DATASIZE;
 		}
 		sendPackets();
-		client.Utils.Timeout.SetTimeout(3000, this, packets.size() - 1);
+		client.Utils.Timeout.SetTimeout(15000, this, packets.size() - 1);
 
 		// getNetworkLayer().sendPacket(pkt);
 		// System.out.println("Sent one packet with header=" + pkt[0]);
@@ -97,7 +97,7 @@ public class DataTransferProtocol extends IRDTProtocol {
 		int z = (Integer) tag;
 		// handle expiration of the timeout:
 				sendPackets();
-				client.Utils.Timeout.SetTimeout(3000, this, tag);
+				client.Utils.Timeout.SetTimeout(15000, this, tag);
 		System.out.println("Timer expired with tag=" + z);
 	}
 
@@ -120,10 +120,10 @@ public class DataTransferProtocol extends IRDTProtocol {
 			Integer[] packet = getNetworkLayer().receivePacket();
 			// if we indeed received a packet
 			if (packet != null) {
+				Integer[] ackPkt = new Integer[HEADERSIZE];
+				ackPkt[0] = packet[0];
+				getNetworkLayer().sendPacket(ackPkt);
 				if (!receivedHeaders.contains(packet[0])) {
-					Integer[] ackPkt = new Integer[HEADERSIZE];
-					ackPkt[0] = packet[0];
-					getNetworkLayer().sendPacket(ackPkt);
 					// tell the user
 					System.out.println("Received packet, length=" + packet.length + "  first byte=" + packet[0]);
 
