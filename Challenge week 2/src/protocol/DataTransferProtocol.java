@@ -89,7 +89,7 @@ public class DataTransferProtocol extends IRDTProtocol {
 
 	@Override
 	public void receiver() {
-		Set<Integer[]> receivedPkts = new HashSet<Integer[]>();
+		Set<Integer> receivedHeaders = new HashSet<Integer>();
 		System.out.println("Receiving...");
 
 		// create the array that will contain the file contents
@@ -103,13 +103,12 @@ public class DataTransferProtocol extends IRDTProtocol {
 		while (!stop) {
 			// try to receive a packet from the network layer
 			Integer[] packet = getNetworkLayer().receivePacket();
-			receivedPkts.add(packet);
+			
 
 			// if we indeed received a packet
 			if (packet != null) {
-				for (Integer[] entry : receivedPkts) {
-					if (!receivedPkts.contains(entry)) {
-
+					if (!receivedHeaders.contains(packet[0])) {
+						receivedHeaders.add(packet[0]);
 						Integer[] ackPkt = new Integer[HEADERSIZE];
 						ackPkt[0] = packet[0];
 						getNetworkLayer().sendPacket(ackPkt);
@@ -126,7 +125,6 @@ public class DataTransferProtocol extends IRDTProtocol {
 							stop = true;
 						}
 					}
-				}
 				// and let's just hope the file is now complete
 			} else {
 				// wait ~10ms (or however long the OS makes us wait) before
