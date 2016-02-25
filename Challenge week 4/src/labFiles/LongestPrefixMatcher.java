@@ -1,13 +1,18 @@
 package labFiles;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 class LongestPrefixMatcher {
 	// TODO: Request access token from your student assistant
 	public static final String ACCESS_TOKEN = "s1234567_abcde";
-	
+
 	public static final String ROUTES_FILE  = "routes.txt";
 	public static final String LOOKUP_FILE  = "lookup.txt";
+	private Map<Byte, Map<Integer, Integer>> prefixes;
 
 	/**
 	 * Main entry point
@@ -21,6 +26,8 @@ class LongestPrefixMatcher {
 	 * Constructs a new LongestPrefixMatcher and starts routing
 	 */
 	public LongestPrefixMatcher() {
+		prefixes = new HashMap<Byte, Map<Integer, Integer>>();
+		fillPrefixes();
 		this.readRoutes();
 		this.readLookup();
 	}
@@ -34,6 +41,16 @@ class LongestPrefixMatcher {
 	 */
 	private void addRoute(int ip, byte prefixLength, int portNumber) { 
 		// TODO: Store this route for later use in lookup() method
+		Map<Integer, Integer> ipAndPNr = prefixes.get(prefixLength);
+		ipAndPNr.put(ip, portNumber);
+		prefixes.put(prefixLength, ipAndPNr);
+	}
+	
+	public void fillPrefixes() {
+		Map<Integer, Integer> ipAndPNr = new HashMap<Integer, Integer>();
+		for (byte i = 25; i > 7; i--) {
+			prefixes.put(i, ipAndPNr);
+		}
 	}
 
 	/**
@@ -42,8 +59,25 @@ class LongestPrefixMatcher {
 	 * @return The port number this IP maps to
 	 */
 	private int lookup(int ip) {
+		Map<Integer, Integer> tempMap = new HashMap<Integer,Integer>();
 		// TODO: Look up this route
+		for(byte i = 25; i > 7; i--) {
+			tempMap = prefixes.get(i);
+			for (Integer k  : tempMap.keySet()) {
+				if (compareIp(ip, k, i)) {
+					System.out.println(tempMap.get(k));
+					return tempMap.get(k);
+				}
+			}
+		}
+		System.out.println(-1);
 		return -1;
+	}
+	
+	private boolean compareIp(int ip, int k, byte i) {
+		int newk = k >> 32 - i;
+		int newip = ip >> 32 - i;
+		return newk == newip;
 	}
 
 	/**
