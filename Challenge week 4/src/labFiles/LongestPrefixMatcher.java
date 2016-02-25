@@ -40,16 +40,12 @@ class LongestPrefixMatcher {
 	 * @param portNumber The port number the IP block should route to
 	 */
 	private void addRoute(int ip, byte prefixLength, int portNumber) { 
-		// TODO: Store this route for later use in lookup() method
-		Map<Integer, Integer> ipAndPNr = prefixes.get(prefixLength);
-		ipAndPNr.put(ip, portNumber);
-		prefixes.put(prefixLength, ipAndPNr);
+		prefixes.get(prefixLength).put(ip,  portNumber);
 	}
 	
 	public void fillPrefixes() {
-		Map<Integer, Integer> ipAndPNr = new HashMap<Integer, Integer>();
 		for (byte i = 25; i > 7; i--) {
-			prefixes.put(i, ipAndPNr);
+			prefixes.put(i, new HashMap<Integer, Integer>());
 		}
 	}
 
@@ -60,23 +56,20 @@ class LongestPrefixMatcher {
 	 */
 	private int lookup(int ip) {
 		Map<Integer, Integer> tempMap = new HashMap<Integer,Integer>();
-		// TODO: Look up this route
 		for(byte i = 25; i > 7; i--) {
 			tempMap = prefixes.get(i);
 			for (Integer k  : tempMap.keySet()) {
 				if (compareIp(ip, k, i)) {
-					System.out.println(tempMap.get(k));
 					return tempMap.get(k);
 				}
 			}
 		}
-		System.out.println(-1);
 		return -1;
 	}
 	
 	private boolean compareIp(int ip, int k, byte i) {
-		int newk = k >> 32 - i;
-		int newip = ip >> 32 - i;
+		int newk = k >>> 32 - i;
+		int newip = ip >>> 32 - i;
 		return newk == newip;
 	}
 
